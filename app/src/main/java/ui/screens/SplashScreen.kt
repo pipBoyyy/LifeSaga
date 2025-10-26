@@ -23,10 +23,11 @@ import kotlinx.coroutines.delay
 fun SplashScreen(navController: NavController) {
     // Этот эффект запустится один раз при появлении экрана
     LaunchedEffect(key1 = true) {
-        delay(3000) // Ждем 3 секунды
-        navController.navigate(Screen.MAIN_MENU.name) {
-            // Удаляем заставку из истории навигации
-            popUpTo(Screen.SPLASH.name) { inclusive = true }
+        delay(3000)
+        // Используем MainMenu.route
+        navController.navigate(Screen.MainMenu.route) {
+            // Удаляем Splash.route из стека
+            popUpTo(Screen.Splash.route) { inclusive = true }
         }
     }
 

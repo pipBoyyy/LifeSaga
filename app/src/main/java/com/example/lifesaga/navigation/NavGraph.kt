@@ -2,7 +2,10 @@ package com.example.lifesaga.navigation
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,10 +16,10 @@ import com.example.lifesaga.ui.screens.MainGameScreen
 import com.example.lifesaga.ui.screens.MainMenuScreen
 import com.example.lifesaga.ui.screens.SettingsScreen
 import com.example.lifesaga.viewmodel.MainGameViewModel
-import com.example.lifesaga.navigation.Screen
-// ... все твои импорты ...
-
-@OptIn(androidx.navigation.NavGraph.Companion
+import androidx.navigation.NavType // <- ДОБАВЬ ЭТОТ ИМПОРТ
+import androidx.navigation.navArgument // <- И ЭТОТ
+import com.example.lifesaga.ui.screens.GameOverScreen
+import com.example.lifesaga.ui.screens.JobsScreen
 
 // Маршрут для вложенного графа, который объединит создание и саму игру
 const val GAME_ROUTE = "game"
@@ -32,7 +35,7 @@ fun NavGraph() {
         // Главное меню
         composable(Screen.MainMenu.route) {
             MainMenuScreen(
-                onNewGame = { navController.navigate(GAME_ROUTE) }, // Переходим на целый граф игры
+                onNewGame = { navController.navigate(GAME_ROUTE) },
                 onContinueGame = {
                     Toast.makeText(navController.context, "Функция 'Продолжить' в разработке", Toast.LENGTH_SHORT).show()
                 },
@@ -43,6 +46,22 @@ fun NavGraph() {
         // Выносим всю игровую логику в отдельный вложенный граф
         gameNavGraph(navController)
 
+        composable(
+            route = "${Screen.GameOver.route}/{age}", // Маршрут с аргументом
+            arguments = listOf(navArgument("age") { type = NavType.IntType })
+        ) { backStackEntry ->
+            // Извлекаем возраст из аргументов
+            val age = backStackEntry.arguments?.getInt("age") ?: 0
+            GameOverScreen(
+                finalAge = age,
+                onPlayAgain = {
+                    // Возвращаемся в главное меню, очищая все экраны сверху
+                    navController.navigate(Screen.MainMenu.route) {
+                        popUpTo(Screen.MainMenu.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         // Экран настроек
         composable(Screen.Settings.route) {
             SettingsScreen(
@@ -57,10 +76,10 @@ fun NavGraph() {
 }
 
 // Вложенный граф для самой игры
-fun NavGraphBuilder.gameNavGraph(navController: androidx.navigation.NavController) {
+fun NavGraphBuilder.gameNavGraph(navController: NavController) {
     navigation(
-        startDestination = Screen.CharacterCreation.route, // Стартовый экран этого графа
-        route = GAME_ROUTE // Имя (маршрут) всего графа
+        startDestination = Screen.CharacterCreation.route,
+        route = GAME_ROUTE
     ) {
         composable(Screen.CharacterCreation.route) {
             // 1. Получаем точку привязки (ViewModelStoreOwner) из графа навигации
@@ -70,9 +89,7 @@ fun NavGraphBuilder.gameNavGraph(navController: androidx.navigation.NavControlle
 
             CharacterCreationScreen(
                 onCharacterCreated = { character ->
-                    // Просто устанавливаем персонажа
                     gameViewModel.setInitialCharacter(character)
-                    // Переходим на следующий экран ВНУТРИ этого же графа
                     navController.navigate(Screen.MainGame.route)
                 },
                 onBack = { navController.popBackStack() }
@@ -84,7 +101,24 @@ fun NavGraphBuilder.gameNavGraph(navController: androidx.navigation.NavControlle
             val viewModelStoreOwner = navController.getBackStackEntry(GAME_ROUTE)
             val gameViewModel: MainGameViewModel = viewModel(viewModelStoreOwner = viewModelStoreOwner)
 
-            MainGameScreen(viewModel = gameViewModel)
+            MainGameScreen(viewModel = gameViewModel, navController = navController)
         }
-    }
+        composable(Screen.Jobs.route) {
+            val viewModelStoreOwner = navController.getBackStackEntry(GAME_ROUTE)
+            val gameViewModel: MainGameViewModel = viewModel(viewModelStoreOwner = viewModelStoreOwner)
+            val character = gameViewModel.characterState.collectAsState().value
+
+            if (character != null) {
+                JobsScreen(
+                    character = character,
+                    onJobSelected = { job ->
+                        // При выборе работы обновляем персонажа и возвращаемся назад
+                        gameViewModel.changeJob(job)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+        }
 }
