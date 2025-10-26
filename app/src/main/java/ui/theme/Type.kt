@@ -8,11 +8,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.lifesaga.R
 
-// Определение твоего кастомного шрифта
-val luckiestGuyFontFamily = FontFamily(
-    // ИСПРАВЛЕНО: Добавлено подчеркивание, чтобы соответствовать имени файла (luckiest_guy_regular.ttf)
-    Font(R.font.luckiestguy_regular, FontWeight.Normal)
-)
 
 // Определение объекта Typography
 val Typography = Typography(

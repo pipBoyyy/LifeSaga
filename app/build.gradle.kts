@@ -67,7 +67,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     // Иконки для Material 3 (ОСТАВЛЯЕМ ТОЛЬКО ЭТУ)
-    implementation("androidx.compose.material3:material3-icons-extended")
+    //implementation("androidx.compose.material3:material3-icons-extended:1.6.7")
 
     // Навигация
     implementation("androidx.navigation:navigation-compose:2.7.7")
