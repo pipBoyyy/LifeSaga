@@ -1,5 +1,10 @@
-package com.example.lifesaga.navigation // Убедись, что пакет правильный
+package com.example.lifesaga.navigation
 
+// Используем enum, как в твоем коде. Это удобно для простых маршрутов.
 enum class Screen {
-    MAIN_MENU, CREATE_CHARACTER, GAME, SETTINGS, EDUCATION
+    SPLASH, // Добавим экран-заставку
+    MAIN_MENU,
+    CREATE_CHARACTER,
+    GAME,
+    SETTINGS
 }
