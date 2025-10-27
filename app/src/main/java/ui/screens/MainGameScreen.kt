@@ -1,16 +1,20 @@
+// В файле ui/screens/MainGameScreen.kt
+
 package com.example.lifesaga.ui.screens
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -25,6 +29,8 @@ fun MainGameScreen(
     val character by viewModel.characterState.collectAsState()
     val event by viewModel.currentEvent.collectAsState()
     val finalAge by viewModel.gameOverState.collectAsState()
+    // 1. ПОДПИСЫВАЕМСЯ НА НОВЫЙ СПИСОК СОБЫТИЙ
+    val yearLog by viewModel.yearEventsLog.collectAsState()
 
     LaunchedEffect(finalAge) {
         finalAge?.let { age ->
@@ -38,34 +44,29 @@ fun MainGameScreen(
             CircularProgressIndicator()
         }
     } else {
-        // --- НАЧАЛО БЛОКА ELSE ---
-
-        // 1. ИСПОЛЬЗУЕМ BOX КАК ГЛАВНЫЙ КОНТЕЙНЕР
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // 2. КОЛОНКА С ПАРАМЕТРАМИ, ПРИЖАТАЯ К ВЕРХУ
+            // Колонка с основной информацией (статистика + ЛОГ СОБЫТИЙ)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter), // Прижимаем к верху Box
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .align(Alignment.TopCenter)
             ) {
-                Text(
-                    text = character!!.name,
-                    style = MaterialTheme.typography.displaySmall
-                )
-                character!!.currentJob?.let {
-                    Text(
-                        text = it.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                // --- Блок со статистикой персонажа (остается без изменений) ---
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = character!!.name, style = MaterialTheme.typography.displaySmall)
+                    character!!.currentJob?.let {
+                        Text(
+                            text = it.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
-
                 CharacterStatsRow(label = "Возраст", value = character!!.age.toString())
                 CharacterStatsRow(label = "Здоровье", value = character!!.health.toString())
                 CharacterStatsRow(label = "Деньги", value = "${character!!.money} $")
@@ -74,17 +75,45 @@ fun MainGameScreen(
                 if (character!!.age < 18) {
                     CharacterStatsRow(label = "Успеваемость", value = character!!.schoolPerformance.toString())
                 }
+
+                // --- 2. НОВЫЙ БЛОК: ЛОГ СОБЫТИЙ ЗА ГОД ---
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("События за год:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Используем LazyColumn для прокручиваемого списка
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f) // Занимает всё доступное место между статистикой и кнопками
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    // items - функция, которая строит элементы списка
+                    items(yearLog) { logEntry ->
+                        Text(
+                            text = "• $logEntry", // Добавляем маркер для красоты
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
             }
 
-            // 3. РЯД С КНОПКАМИ, ПРИЖАТЫЙ К НИЗУ
+
+            // --- Ряд с кнопками внизу (остается почти без изменений) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter), // Прижимаем к низу Box
+                    .align(Alignment.BottomCenter),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Логика кнопок остается прежней
                 if (character!!.age < 18) {
-                    // ЕСЛИ ШКОЛЬНИК: показываем кнопку "Школа"
                     Button(
                         onClick = { navController.navigate(Screen.School.route) },
                         modifier = Modifier.weight(1f)
@@ -92,7 +121,6 @@ fun MainGameScreen(
                         Text("Школа")
                     }
                 } else if (character!!.currentJob == null) {
-                    // ЕСЛИ ВЗРОСЛЫЙ И БЕЗРАБОТНЫЙ: кнопка "Найти работу"
                     Button(
                         onClick = { navController.navigate(Screen.Jobs.route) },
                         modifier = Modifier.weight(1f)
@@ -100,26 +128,18 @@ fun MainGameScreen(
                         Text("Найти работу")
                     }
                 } else {
-                    // ЕСЛИ ВЗРОСЛЫЙ И РАБОТАЕТ: кнопка "Уволиться"
-                    Button(
-                        onClick = { viewModel.quitJob() },
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Button(onClick = { viewModel.quitJob() }, modifier = Modifier.weight(1f)) {
                         Text("Уволиться")
                     }
                 }
 
-                // Кнопка "Следующий год" всегда на месте
-                Button(
-                    onClick = { viewModel.nextYear() },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("След. год") // Убрал лишний параметр fontSize, лучше управлять стилями централизованно
+                Button(onClick = { viewModel.nextYear() }, modifier = Modifier.weight(1f)) {
+                    Text("След. год")
                 }
             }
         }
 
-        // Диалог события остается на своем месте
+        // Диалог для событий С ВЫБОРОМ остается на месте
         event?.let { currentEvent ->
             GameEventDialog(
                 event = currentEvent,
@@ -128,9 +148,9 @@ fun MainGameScreen(
                 }
             )
         }
-
-    } // --- КОНЕЦ БЛОКА ELSE ---
+    }
 }
+
 
 @Composable
 fun CharacterStatsRow(label: String, value: String) {

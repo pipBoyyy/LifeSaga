@@ -128,20 +128,23 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController) {
 
         }
         composable(Screen.School.route) {
-            // Получаем доступ к общей ViewModel игрового процесса
+            // Получаем доступ к общему ViewModel, который хранит состояние игры
             val viewModelStoreOwner = navController.getBackStackEntry(GAME_ROUTE)
-            val gameViewModel: MainGameViewModel = androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner)
+            val gameViewModel: MainGameViewModel = androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = viewModelStoreOwner)
 
             SchoolScreen(
-                onActionSelected = { action ->
-                    // Вызываем функцию в ViewModel
-                    gameViewModel.performSchoolAction(action)
-                    // Возвращаемся на главный игровой экран
+                onActionSelected = { schoolAction ->
+                    // 1. Говорим ViewModel, что нужно обработать действие из школы
+                    gameViewModel.handleSchoolAction(schoolAction)
+
+                    // 2. После выбора действия возвращаемся на главный экран
                     navController.popBackStack()
                 },
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    // Кнопка "назад" просто возвращает на предыдущий экран
+                    navController.popBackStack()
+                }
             )
         }
-        // ----------------------------------------------
     }
 }
