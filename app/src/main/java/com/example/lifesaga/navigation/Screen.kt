@@ -9,4 +9,5 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings_screen")
     data object GameOver : Screen("game_over_screen") // <- ДОБАВЬ ЭТУ СТРОКУ
     data object Jobs : Screen("jobs_screen") // <- ДОБАВЬ ЭТУ СТРОКУ
+    data object School : Screen("school_screen")
 }

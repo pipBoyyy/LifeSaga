@@ -20,6 +20,8 @@ import androidx.navigation.NavType // <- ДОБАВЬ ЭТОТ ИМПОРТ
 import androidx.navigation.navArgument // <- И ЭТОТ
 import com.example.lifesaga.ui.screens.GameOverScreen
 import com.example.lifesaga.ui.screens.JobsScreen
+import com.example.lifesaga.data.Character
+import com.example.lifesaga.ui.screens.SchoolScreen
 
 // Маршрут для вложенного графа, который объединит создание и саму игру
 const val GAME_ROUTE = "game"
@@ -82,15 +84,19 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController) {
         route = GAME_ROUTE
     ) {
         composable(Screen.CharacterCreation.route) {
-            // 1. Получаем точку привязки (ViewModelStoreOwner) из графа навигации
             val viewModelStoreOwner = navController.getBackStackEntry(GAME_ROUTE)
-            // 2. Передаем эту точку привязки в viewModel()
-            val gameViewModel: MainGameViewModel = viewModel(viewModelStoreOwner = viewModelStoreOwner)
+            val gameViewModel: MainGameViewModel = androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = viewModelStoreOwner)
 
             CharacterCreationScreen(
-                onCharacterCreated = { character ->
-                    gameViewModel.setInitialCharacter(character)
-                    navController.navigate(Screen.MainGame.route)
+                onCharacterCreated = { characterName: String -> // <- ВОТ ИСПРАВЛЕНИЕ
+                    // Теперь компилятор знает, что characterName - это строка
+                    val newCharacter = Character(name = characterName)
+                    gameViewModel.setInitialCharacter(newCharacter)
+                    navController.navigate(Screen.MainGame.route) {
+                        popUpTo(Screen.CharacterCreation.route) {
+                            inclusive = true
+                        }
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -119,6 +125,23 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController) {
                     onBack = { navController.popBackStack() }
                 )
             }
+
         }
+        composable(Screen.School.route) {
+            // Получаем доступ к общей ViewModel игрового процесса
+            val viewModelStoreOwner = navController.getBackStackEntry(GAME_ROUTE)
+            val gameViewModel: MainGameViewModel = androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner)
+
+            SchoolScreen(
+                onActionSelected = { action ->
+                    // Вызываем функцию в ViewModel
+                    gameViewModel.performSchoolAction(action)
+                    // Возвращаемся на главный игровой экран
+                    navController.popBackStack()
+                },
+                onBack = { navController.popBackStack() }
+            )
         }
+        // ----------------------------------------------
+    }
 }

@@ -40,15 +40,17 @@ fun MainGameScreen(
     } else {
         // --- НАЧАЛО БЛОКА ELSE ---
 
-        // Основной UI экрана
+        // 1. ИСПОЛЬЗУЕМ BOX КАК ГЛАВНЫЙ КОНТЕЙНЕР
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Колонка с параметрами
+            // 2. КОЛОНКА С ПАРАМЕТРАМИ, ПРИЖАТАЯ К ВЕРХУ
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter), // Прижимаем к верху Box
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -69,17 +71,28 @@ fun MainGameScreen(
                 CharacterStatsRow(label = "Деньги", value = "${character!!.money} $")
                 CharacterStatsRow(label = "Счастье", value = character!!.happiness.toString())
                 CharacterStatsRow(label = "Ум", value = character!!.smarts.toString())
+                if (character!!.age < 18) {
+                    CharacterStatsRow(label = "Успеваемость", value = character!!.schoolPerformance.toString())
+                }
             }
 
-            // Ряд с кнопками
+            // 3. РЯД С КНОПКАМИ, ПРИЖАТЫЙ К НИЗУ
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
+                    .align(Alignment.BottomCenter), // Прижимаем к низу Box
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (character!!.currentJob == null) {
-                    // ЕСЛИ РАБОТЫ НЕТ: показываем кнопку для поиска работы
+                if (character!!.age < 18) {
+                    // ЕСЛИ ШКОЛЬНИК: показываем кнопку "Школа"
+                    Button(
+                        onClick = { navController.navigate(Screen.School.route) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Школа")
+                    }
+                } else if (character!!.currentJob == null) {
+                    // ЕСЛИ ВЗРОСЛЫЙ И БЕЗРАБОТНЫЙ: кнопка "Найти работу"
                     Button(
                         onClick = { navController.navigate(Screen.Jobs.route) },
                         modifier = Modifier.weight(1f)
@@ -87,9 +100,9 @@ fun MainGameScreen(
                         Text("Найти работу")
                     }
                 } else {
-                    // ЕСЛИ РАБОТА ЕСТЬ: показываем кнопку "Уволиться"
+                    // ЕСЛИ ВЗРОСЛЫЙ И РАБОТАЕТ: кнопка "Уволиться"
                     Button(
-                        onClick = { viewModel.quitJob() }, // Вызываем новую функцию
+                        onClick = { viewModel.quitJob() },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Уволиться")
@@ -101,13 +114,12 @@ fun MainGameScreen(
                     onClick = { viewModel.nextYear() },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("След. год", fontSize = 18.sp)
+                    Text("След. год") // Убрал лишний параметр fontSize, лучше управлять стилями централизованно
                 }
             }
         }
 
-        // --- ДИАЛОГ СОБЫТИЯ ТЕПЕРЬ СТОИТ В ПРАВИЛЬНОМ МЕСТЕ ---
-        // Он находится внутри `else`, но снаружи `Box`.
+        // Диалог события остается на своем месте
         event?.let { currentEvent ->
             GameEventDialog(
                 event = currentEvent,
@@ -120,7 +132,6 @@ fun MainGameScreen(
     } // --- КОНЕЦ БЛОКА ELSE ---
 }
 
-// Composable для строки статистики теперь снова виден, так как он находится вне основной функции
 @Composable
 fun CharacterStatsRow(label: String, value: String) {
     Row(
