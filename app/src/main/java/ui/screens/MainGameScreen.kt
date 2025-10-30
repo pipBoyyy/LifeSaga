@@ -1,5 +1,4 @@
 // В файле ui/screens/MainGameScreen.kt
-
 package com.example.lifesaga.ui.screens
 
 import androidx.compose.foundation.border
@@ -14,10 +13,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.lifesaga.R
 import com.example.lifesaga.navigation.Screen
 import com.example.lifesaga.viewmodel.MainGameViewModel
 
@@ -29,7 +31,6 @@ fun MainGameScreen(
     val character by viewModel.characterState.collectAsState()
     val event by viewModel.currentEvent.collectAsState()
     val finalAge by viewModel.gameOverState.collectAsState()
-    // 1. ПОДПИСЫВАЕМСЯ НА НОВЫЙ СПИСОК СОБЫТИЙ
     val yearLog by viewModel.yearEventsLog.collectAsState()
 
     LaunchedEffect(finalAge) {
@@ -39,129 +40,168 @@ fun MainGameScreen(
         }
     }
 
-    if (character == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            // Колонка с основной информацией (статистика + ЛОГ СОБЫТИЙ)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
+    Scaffold(
+        bottomBar = {
+            BottomAppBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
             ) {
-                // --- Блок со статистикой персонажа (остается без изменений) ---
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = character!!.name, style = MaterialTheme.typography.displaySmall)
-                    character!!.currentJob?.let {
-                        Text(
-                            text = it.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.primary
+                // Элемент 1: Школа/Работа (без подписи)
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        if (character!!.age < 18) {
+                            navController.navigate(Screen.School.route)
+                        } else {
+                            navController.navigate(Screen.Jobs.route)
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_job),
+                            contentDescription = "Школа или Работа",
+                            modifier = Modifier.size(70.dp), // Сделал чуть-чуть побольше
+                            tint = Color.Unspecified
                         )
                     }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                CharacterStatsRow(label = "Возраст", value = character!!.age.toString())
-                CharacterStatsRow(label = "Здоровье", value = character!!.health.toString())
-                CharacterStatsRow(label = "Деньги", value = "${character!!.money} $")
-                CharacterStatsRow(label = "Счастье", value = character!!.happiness.toString())
-                CharacterStatsRow(label = "Ум", value = character!!.smarts.toString())
-                if (character!!.age < 18) {
-                    CharacterStatsRow(label = "Успеваемость", value = character!!.schoolPerformance.toString())
-                }
+                    // label = { Text("Занятие") } // <-- Убрали подпись
+                )
 
-                // --- 2. НОВЫЙ БЛОК: ЛОГ СОБЫТИЙ ЗА ГОД ---
-                Spacer(modifier = Modifier.height(24.dp))
-                Text("События за год:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Используем LazyColumn для прокручиваемого списка
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f) // Занимает всё доступное место между статистикой и кнопками
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            RoundedCornerShape(8.dp)
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate(Screen.Relationships.route) },                    icon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_relationships), // Убедись, что у тебя есть эта иконка
+                            contentDescription = "Отношения",
+                            modifier = Modifier.size(70.dp),
+                            tint = Color.Unspecified
                         )
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                    }
+                )
+
+                // Элемент 2: Имущество (без подписи)
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate(Screen.Assets.route) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_assets),
+                            contentDescription = "Имущество",
+                            modifier = Modifier.size(70.dp), // Сделал чуть-чуть побольше
+                            tint = Color.Unspecified
+                        )
+                    }
+                    // label = { Text("Имущество") } // <-- Убрали подпись
+                )
+
+                // Элемент 3: Следующий год (без подписи)
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { viewModel.nextYear() },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_next_year),
+                            contentDescription = "Следующий год",
+                            modifier = Modifier.size(70.dp), // Сделал чуть-чуть побольше
+                            tint = Color.Unspecified
+                        )
+                    }
+                    // label = { Text("Год +") } // <-- Убрали подпись
+                )
+            }
+        }
+    ) { innerPadding ->
+        if (character == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    // items - функция, которая строит элементы списка
-                    items(yearLog) { logEntry ->
-                        Text(
-                            text = "• $logEntry", // Добавляем маркер для красоты
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
+                    // --- Блок со статистикой персонажа ---
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                    ) {
+                        Text(text = character!!.name, style = MaterialTheme.typography.displaySmall)
+                        character!!.currentJob?.let {
+                            Text(
+                                text = it.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CharacterStatsRow(label = "Возраст", value = character!!.age.toString())
+                    CharacterStatsRow(label = "Здоровье", value = character!!.health.toString())
+                    CharacterStatsRow(label = "Счастье", value = character!!.happiness.toString())
+                    CharacterStatsRow(label = "Деньги", value = "${character!!.money}$")
+                    CharacterStatsRow(label = "Ум", value = character!!.smarts.toString())
+                    // ▼▼▼ ВОТ ОНА, ВЕРНУЛАСЬ! ▼▼▼
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- ЛОГ СОБЫТИЙ ЗА ГОД ---
+                    Text(
+                        "События за год:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        items(yearLog) { logEntry ->
+                            Text(
+                                text = "• $logEntry",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
 
-
-            // --- Ряд с кнопками внизу (остается почти без изменений) ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Логика кнопок остается прежней
-                if (character!!.age < 18) {
-                    Button(
-                        onClick = { navController.navigate(Screen.School.route) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Школа")
-                    }
-                } else if (character!!.currentJob == null) {
-                    Button(
-                        onClick = { navController.navigate(Screen.Jobs.route) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Найти работу")
-                    }
-                } else {
-                    Button(onClick = { viewModel.quitJob() }, modifier = Modifier.weight(1f)) {
-                        Text("Уволиться")
-                    }
-                }
-
-                Button(onClick = { viewModel.nextYear() }, modifier = Modifier.weight(1f)) {
-                    Text("След. год")
-                }
+            // Диалог для событий
+            event?.let { currentEvent ->
+                GameEventDialog(
+                    event = currentEvent,
+                    onChoiceSelected = { choice -> viewModel.handleEventChoice(choice) }
+                )
             }
-        }
-
-        // Диалог для событий С ВЫБОРОМ остается на месте
-        event?.let { currentEvent ->
-            GameEventDialog(
-                event = currentEvent,
-                onChoiceSelected = { choice ->
-                    viewModel.handleEventChoice(choice)
-                }
-            )
         }
     }
 }
 
-
+// Функция CharacterStatsRow остается без изменений.
+// Убедись, что она у тебя есть в файле.
 @Composable
 fun CharacterStatsRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, fontSize = 20.sp)
-        Text(text = value, fontSize = 20.sp, style = MaterialTheme.typography.bodyLarge)
+        Text(text = label, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
     }
 }

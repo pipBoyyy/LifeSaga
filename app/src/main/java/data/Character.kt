@@ -8,6 +8,8 @@ data class Character(
     val happiness: Int = 70, // Счастье от 0 до 100
     val smarts: Int = 50,      // Ум от 0 до 100
     val schoolPerformance: Int = 50,
-    val currentJob: Job? = null
+    val currentJob: Job? = null,
+    val assets: List<Asset> = emptyList(),
+    val relationships: MutableList<Relationship> = mutableListOf()
 // ---------------------------------
 )
