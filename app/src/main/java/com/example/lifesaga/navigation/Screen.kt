@@ -11,5 +11,6 @@ sealed class Screen(val route: String) {
     object Jobs : Screen("jobs")
     object School : Screen("school")
     object Assets : Screen("assets")
-    object Relationships : Screen("relationships") // <-- ДОБАВЬ ЭТУ СТРОКУ
+    object Relationships : Screen("relationships")
+    object Actions : Screen("actions")// <-- ДОБАВЬ ЭТУ СТРОКУ
 }

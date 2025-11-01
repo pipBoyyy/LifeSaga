@@ -1,6 +1,5 @@
 package com.example.lifesaga.viewmodel
 
-import androidx.compose.ui.unit.coerceAtMost
 import androidx.core.app.Person
 import androidx.lifecycle.ViewModel
 import com.example.lifesaga.data.Asset // Убедись, что этот импорт правильный
@@ -17,6 +16,11 @@ import kotlinx.coroutines.flow.update
 import kotlin.random.Random
 import com.example.lifesaga.data.PersonRepository
 import com.example.lifesaga.data.Relationship
+import kotlin.ranges.coerceIn
+import kotlin.ranges.randomOrNull
+import com.example.lifesaga.data.InteractionResult
+import kotlinx.coroutines.flow.StateFlow
+import com.example.lifesaga.data.ActionResult // <-- ДОБАВЬ ЭТУ СТРОКУ
 
 class MainGameViewModel : ViewModel() {
 
@@ -27,8 +31,136 @@ class MainGameViewModel : ViewModel() {
         _personToInteract.value = person
     }
 
+    private val _interactionResult = MutableStateFlow<InteractionResult?>(null)
+    val interactionResult: StateFlow<InteractionResult?> = _interactionResult
+
+    fun clearInteractionResult() {
+        _interactionResult.value = null
+    }
+
+    fun interactWithPerson(action: String) {
+        val currentChar = _characterState.value ?: return
+        val person = _personToInteract.value ?: return
+
+        // Определяем стоимость действия в энергии
+        val energyCost = when (action) {
+            "talk" -> 15
+            "compliment" -> 20
+            "argue" -> 35
+            else -> 0
+        }
+
+        // 1. Проверяем, достаточно ли энергии
+        if (currentChar.energy < energyCost) {
+            // Если энергии не хватает, создаем специальный результат и выходим
+            _interactionResult.value = InteractionResult(
+                message = "У вас слишком мало энергии для этого действия.",
+                relationshipChange = 0,
+                happinessChange = 0
+            )
+            // Закрываем диалог выбора персонажа, чтобы показать диалог с результатом
+            clearPersonToInteract()
+            return
+        }
+
+        // 2. Определяем возможные исходы для каждого действия
+        val outcomes = when (action) {
+            "talk" -> listOf(
+                InteractionResult("У вас была теплая, уютная и непринужденная беседа.", relationshipChange = 3, happinessChange = 2),
+                InteractionResult("Разговор был немного неловким, но вы нашли общие темы.", relationshipChange = 1, happinessChange = 0),
+                InteractionResult("Вы поспорили о пустяках, и остался неприятный осадок.", relationshipChange = -2, happinessChange = -3),
+                InteractionResult("Вы отлично поладили и долго смеялись.", relationshipChange = 4, happinessChange = 3)
+            )
+            "compliment" -> listOf(
+                InteractionResult("Ваш комплимент был принят с благодарностью, человек явно смутился.", relationshipChange = 5, happinessChange = 2),
+                InteractionResult("Комплимент прозвучал немного неуклюже, но его оценили.", relationshipChange = 2, happinessChange = 1),
+                InteractionResult("Человек не понял вашего комплимента и посмотрел на вас с подозрением.", relationshipChange = -3, happinessChange = -2),
+                InteractionResult("Вы попали в самое сердце! Отношения заметно потеплели.", relationshipChange = 7, happinessChange = 3)
+            )
+            "argue" -> listOf(
+                InteractionResult("Вы яростно поспорили, но в итоге пришли к общему мнению. Уважение выросло.", relationshipChange = 2, happinessChange = -1),
+                InteractionResult("Спор перерос в настоящую ссору. Вы наговорили друг другу лишнего.", relationshipChange = -10, happinessChange = -8),
+                InteractionResult("Вы пытались спорить, но вас быстро поставили на место. Вы чувствуете себя глупо.", relationshipChange = -5, happinessChange = -5),
+                InteractionResult("Ваши аргументы были настолько убедительны, что вы вышли из спора победителем.", relationshipChange = 1, happinessChange = 4)
+            )
+            else -> emptyList()
+        }
+
+        // 3. Выбираем случайный исход
+        val result = outcomes.randomOrNull() ?: return
+
+        // 4. Обновляем состояние персонажа
+        val updatedRelationships = currentChar.relationships.toMutableList()
+        val relIndex = updatedRelationships.indexOfFirst { it.personId == person.id }
+        if (relIndex != -1) {
+            val oldRel = updatedRelationships[relIndex]
+            updatedRelationships[relIndex] = oldRel.copy(
+                relationshipMeter = (oldRel.relationshipMeter + result.relationshipChange).coerceIn(0, 100)
+            )
+        }
+
+        _characterState.value = currentChar.copy(
+            relationships = updatedRelationships,
+            happiness = (currentChar.happiness + result.happinessChange).coerceIn(0, 100),
+            energy = (currentChar.energy - energyCost).coerceAtLeast(0) // Тратим энергию
+        )
+
+        // 5. Сохраняем результат для отображения в UI и закрываем старый диалог
+        _interactionResult.value = result
+        clearPersonToInteract()
+    }
+
+
     fun clearPersonToInteract() {
         _personToInteract.value = null
+    }
+
+    fun goToHospital() {
+        _characterState.value?.let { currentChar ->
+            val cost = 250
+            val healthGain = 8
+
+            if (currentChar.money >= cost && currentChar.health < 100) {
+                // Обновляем персонажа
+                _characterState.value = currentChar.copy(
+                    money = currentChar.money - cost,
+                    health = (currentChar.health + healthGain).coerceAtMost(100)
+                )
+                // Создаем сообщение для диалога
+                val messages = listOf(
+                    "Врачи вас осмотрели и подлатали. Вы чувствуете себя лучше!",
+                    "Вы прошли курс процедур. Здоровье заметно улучшилось.",
+                    "Поход в больницу не прошел даром, вы полны сил.",
+                    "Доктор прописал вам витамины и отдых. Ваше самочувствие улучшилось.",
+                    "Вы успешно прошли обследование. Все показатели в норме!"
+                )
+                _actionResult.value = ActionResult(messages.random())
+            }
+        }
+    }
+
+    fun doSport() {
+        _characterState.value?.let { currentChar ->
+            val energyCost = 30
+            val fitnessGain = 1
+
+            if (currentChar.energy >= energyCost) {
+                // Обновляем персонажа
+                _characterState.value = currentChar.copy(
+                    energy = currentChar.energy - energyCost,
+                    fitness = (currentChar.fitness + fitnessGain).coerceAtMost(10)
+                )
+                // Создаем сообщение для диалога
+                val messages = listOf(
+                    "Отличная тренировка! Вы чувствуете прилив сил.",
+                    "Вы выжали из себя все соки в спортзале. Мышцы приятно гудят.",
+                    "После интенсивной пробежки мир кажется ярче.",
+                    "Вы побили свой личный рекорд в жиме лежа. Так держать!",
+                    "Тренер похвалил вас за усердие. Результат не заставит себя ждать."
+                )
+                _actionResult.value = ActionResult(messages.random())
+            }
+        }
     }
 
     private val _characterState = MutableStateFlow<Character?>(null)
@@ -45,6 +177,16 @@ class MainGameViewModel : ViewModel() {
     private val _gameOverState = MutableStateFlow<Int?>(null)
     val gameOverState = _gameOverState.asStateFlow()
 
+    private val _actionResult = MutableStateFlow<ActionResult?>(null)
+    val actionResult: StateFlow<ActionResult?> = _actionResult
+// ▲▲▲
+
+    // Метод для закрытия диалога
+    fun clearActionResult() {
+        _actionResult.value = null
+    }
+
+
     fun setInitialCharacter(character: Character) {
         _characterState.value = character
         _gameOverState.value = null
@@ -54,6 +196,7 @@ class MainGameViewModel : ViewModel() {
     fun nextYear() {
         val character = _characterState.value ?: return
 
+        // Создаем ЕДИНЫЙ лог для всех событий этого года
         val newYearLog = mutableListOf<String>()
 
         // 1. Расходы на содержание имущества
@@ -77,10 +220,30 @@ class MainGameViewModel : ViewModel() {
             newYearLog.add("[НОВОСТИ]: $news")
         }
 
+        // ▼▼▼ БЛОК С РАСЧЕТОМ ЗДОРОВЬЯ ▼▼▼
+        var healthLoss = 0
+        if (character.age >= 50) {
+            val baseLoss = when {
+                character.fitness >= 7 -> 2 // Высокий фитнес
+                character.fitness >= 4 -> 3 // Средний фитнес
+                else -> 5                   // Низкий фитнес
+            }
+            val additionalLoss = (character.age - 50) / 2
+            healthLoss = baseLoss + additionalLoss
+
+            // СРАЗУ ДОБАВЛЯЕМ СООБЩЕНИЕ В ЛОГ ЭТОГО ГОДА
+            if (healthLoss > 0) {
+                newYearLog.add("Возраст дает о себе знать. Здоровье снизилось на $healthLoss.")
+            }
+        }
+        // ▲▲▲
+
         // 4. Обновляем персонажа со всеми изменениями за год
         val updatedCharacter = character.copy(
             age = character.age + 1,
-            money = finalMoney // Используем финальную сумму денег
+            money = finalMoney,
+            energy = 100,
+            health = (character.health - healthLoss).coerceAtLeast(0) // Применяем потерю здоровья
         )
 
         // 5. СРАЗУ ЖЕ применяем это новое состояние
@@ -89,38 +252,43 @@ class MainGameViewModel : ViewModel() {
         // 6. Теперь, на основе обновленного персонажа, ищем интерактивное событие
         val interactiveEvent = EventRepository.getRandomEvent(updatedCharacter)
         if (interactiveEvent != null) {
-            // Если событие есть — показываем его.
             _currentEvent.value = interactiveEvent
         } else {
             // Если события нет — просто проверяем на конец игры.
-            checkGameOver(updatedCharacter)
+            checkGameOver(updatedCharacter) // Передаем обновленного персонажа
         }
 
-        // 7. Обновляем лог для UI в самом конце
+        // 7. Обновляем лог для UI в самом конце, ОДИН РАЗ
         _yearEventsLog.value = newYearLog
     }
 
     fun createNewCharacter(name: String) {
-        val newCharacter = Character(
-            name = name,
-            age = 1,
-            health = 100,
-            happiness = 75,
-            money = 50,
-            smarts = 50,
-            schoolPerformance = 60,
-            currentJob = null,
-            assets = emptyList()
-        )
-        setInitialCharacter(newCharacter)
+        val initialRelationships = mutableListOf<Relationship>()
         val parents = PersonRepository.getInitialParents()
         parents.forEach { parent ->
             val initialRelationship = Relationship(
                 personId = parent.id,
-                relationshipMeter = Random.nextInt(70, 95) // Начальные отношения с родителями
+                relationshipMeter = Random.nextInt(70, 95)
             )
-            newCharacter.relationships.add(initialRelationship)
+            initialRelationships.add(initialRelationship)
         }
+        val newCharacter = Character(
+            name = name,
+            age = 6,
+            health = 100,
+            happiness = 75,
+            energy = 100,
+            money = 50,
+            smarts = 50,
+            fitness = 3,
+            schoolPerformance = 60,
+            currentJob = null,
+            assets = emptyList(),
+            hasGymMembership = false,
+            relationships = initialRelationships
+        )
+        setInitialCharacter(newCharacter)
+
     }
 
     fun resetGame() {

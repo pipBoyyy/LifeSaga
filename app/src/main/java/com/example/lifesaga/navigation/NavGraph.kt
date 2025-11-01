@@ -122,8 +122,7 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController, gameViewModel: Ma
             if (character != null) {
                 AssetsScreen(
                     character = character,
-                    availableAssets = AssetRepository.getAvailableAssets(),
-                    onBuyAsset = { asset ->
+                    availableAssets = AssetRepository.getAvailableAssets(character),                    onBuyAsset = { asset ->
                         gameViewModel.buyAsset(asset)
                         navController.popBackStack()
                     },
@@ -136,5 +135,10 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController, gameViewModel: Ma
             // Передаем и ViewModel тоже
             RelationshipsScreen(navController = navController, gameViewModel = gameViewModel)
         }
+
+        composable(Screen.Actions.route) {
+            ActionsScreen(navController = navController, gameViewModel = gameViewModel)
+        }
+
     }
 }

@@ -79,6 +79,19 @@ fun MainGameScreen(
                     }
                 )
 
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate(Screen.Actions.route) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_actions), // Убедись, что иконка с таким именем есть
+                            contentDescription = "Действия",
+                            modifier = Modifier.size(70.dp),
+                            tint = Color.Unspecified
+                        )
+                    }
+                )
+
                 // Элемент 2: Имущество (без подписи)
                 NavigationBarItem(
                     selected = false,
@@ -147,6 +160,8 @@ fun MainGameScreen(
                     CharacterStatsRow(label = "Счастье", value = character!!.happiness.toString())
                     CharacterStatsRow(label = "Деньги", value = "${character!!.money}$")
                     CharacterStatsRow(label = "Ум", value = character!!.smarts.toString())
+                    CharacterStatsRow(label = "Энергия", value = character!!.energy.toString())
+                    CharacterStatsRow(label = "Спорт", value = character!!.fitness.toString())
                     // ▼▼▼ ВОТ ОНА, ВЕРНУЛАСЬ! ▼▼▼
                     Spacer(modifier = Modifier.height(24.dp))
 

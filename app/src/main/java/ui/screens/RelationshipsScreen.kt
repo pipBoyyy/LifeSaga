@@ -1,8 +1,9 @@
-// Полностью замени содержимое файла ui/screens/RelationshipsScreen.kt
 package com.example.lifesaga.ui.screens
 
-import androidx.compose.foundation.clickable // <-- Убедись, что импорт есть
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +27,8 @@ fun RelationshipsScreen(
 ) {
     val character by gameViewModel.characterState.collectAsState()
     val personToInteract by gameViewModel.personToInteract.collectAsState()
+    // ▼▼▼ НОВЫЙ STATE ДЛЯ РЕЗУЛЬТАТА ▼▼▼
+    val interactionResult by gameViewModel.interactionResult.collectAsState()
 
     Scaffold(
         topBar = {
@@ -45,21 +48,18 @@ fun RelationshipsScreen(
                 .padding(horizontal = 16.dp)
         ) {
             character?.let { char ->
-                // ▼▼▼ ВАЖНЕЙШЕЕ ИЗМЕНЕНИЕ ЗДЕСЬ ▼▼▼
                 items(
                     items = char.relationships,
-                    key = { it.personId } // Уникальный ключ для элемента списка
+                    key = { it.personId }
                 ) { relationship ->
                     val person = PersonRepository.getPersonById(relationship.personId)
                     person?.let { currentPerson ->
-                        // Мы создаем Box просто чтобы повесить на него clickable
                         Box(modifier = Modifier.clickable {
                             gameViewModel.selectPersonToInteract(currentPerson)
                         }) {
                             RelationshipItem(
                                 person = currentPerson,
                                 relationship = relationship
-                                // onClick больше не передается
                             )
                         }
                     }
@@ -68,14 +68,42 @@ fun RelationshipsScreen(
         }
     }
 
+    // --- ДИАЛОГ ВЫБОРА ДЕЙСТВИЯ ---
     personToInteract?.let { person ->
         AlertDialog(
             onDismissRequest = { gameViewModel.clearPersonToInteract() },
             title = { Text("Взаимодействие с ${person.name}") },
-            text = { Text("Здесь будут кнопки действий.") },
+            text = {
+                // ▼▼▼ ОБНОВЛЕННЫЙ БЛОК С КНОПКАМИ ДЕЙСТВИЙ ▼▼▼
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { gameViewModel.interactWithPerson("talk") }) {
+                        Text("Поговорить (15 энергии)")
+                    }
+                    Button(onClick = { gameViewModel.interactWithPerson("compliment") }) {
+                        Text("Комплимент (20 энергии)")
+                    }
+                    Button(onClick = { gameViewModel.interactWithPerson("argue") }) {
+                        Text("Поспорить (35 энергии)")
+                    }
+                }
+            },
             confirmButton = {
                 Button(onClick = { gameViewModel.clearPersonToInteract() }) {
                     Text("Закрыть")
+                }
+            }
+        )
+    }
+
+    // --- НОВЫЙ ДИАЛОГ ОТОБРАЖЕНИЯ РЕЗУЛЬТАТА ---
+    interactionResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { gameViewModel.clearInteractionResult() },
+            title = { Text("Результат взаимодействия") },
+            text = { Text(result.message) }, // Показываем сообщение из ViewModel
+            confirmButton = {
+                Button(onClick = { gameViewModel.clearInteractionResult() }) {
+                    Text("Отлично")
                 }
             }
         )

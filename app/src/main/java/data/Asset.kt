@@ -8,5 +8,7 @@ data class Asset(
     val price: Int,
     val annualCost: Int, // Ежегодные расходы на содержание
     val happinessBoost: Int,
-    val category: AssetCategory// Насколько повышает счастье
+    val category: AssetCategory,
+    val minAge: Int,          // <-- ДОБАВЬ ЭТУ СТРОКУ
+    val isUnique: Boolean// Насколько повышает счастье
 )
