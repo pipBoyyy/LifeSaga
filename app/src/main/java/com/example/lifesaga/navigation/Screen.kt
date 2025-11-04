@@ -9,8 +9,9 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object GameOver : Screen("game_over")
     object Jobs : Screen("jobs")
-    object School : Screen("school")
-    object Assets : Screen("assets")
+    object Study : Screen("study") // Было: object School : Screen("school")    object Assets : Screen("assets")
     object Relationships : Screen("relationships")
     object Actions : Screen("actions")// <-- ДОБАВЬ ЭТУ СТРОКУ
+    object Enrollment : Screen("enrollment") // <-- ДОБАВЬ ЭТУ СТРОКУ
+    object Assets : Screen("assets")
 }

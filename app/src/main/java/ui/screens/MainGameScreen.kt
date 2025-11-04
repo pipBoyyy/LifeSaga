@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.lifesaga.R
 import com.example.lifesaga.navigation.Screen
+import com.example.lifesaga.ui.composables.PostSchoolChoiceDialog
 import com.example.lifesaga.viewmodel.MainGameViewModel
 
 @Composable
@@ -40,6 +41,24 @@ fun MainGameScreen(
         }
     }
 
+    val showDialog by viewModel.showPostSchoolChoiceDialog.collectAsState()
+
+    if (showDialog) {
+        PostSchoolChoiceDialog(
+            onDismissRequest = {
+                // Вызываем метод ViewModel, если окно пытаются закрыть
+                //viewModel.dismissPostSchoolChoiceDialog()
+                // Пока не дадим закрывать окно, чтобы выбор был сделан.
+            },
+            onChoiceMade = { choice ->
+                // Передаем выбор во ViewModel, а также функцию для навигации
+                viewModel.handlePostSchoolChoice(choice) { route ->
+                    navController.navigate(route)
+                }
+            }
+        )
+    }
+
     Scaffold(
         bottomBar = {
             BottomAppBar(
@@ -47,24 +66,31 @@ fun MainGameScreen(
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
                 // Элемент 1: Школа/Работа (без подписи)
+                // Элемент 1: "Умная" иконка Учебы/Работы
                 NavigationBarItem(
                     selected = false,
                     onClick = {
-                        if (character!!.age < 18) {
-                            navController.navigate(Screen.School.route)
-                        } else {
-                            navController.navigate(Screen.Jobs.route)
+                        // Новая "умная" логика навигации
+                        character?.let { char ->
+                            val route = when {
+                                // Если студент
+                                char.universityId != null -> Screen.Study.route
+                                // Если школьник
+                                char.age < 18 && char.education == com.example.lifesaga.data.EducationLevel.NONE -> Screen.Study.route
+                                // Во всех остальных случаях (взрослый)
+                                else -> Screen.Jobs.route
+                            }
+                            navController.navigate(route)
                         }
                     },
                     icon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_job),
-                            contentDescription = "Школа или Работа",
-                            modifier = Modifier.size(70.dp), // Сделал чуть-чуть побольше
+                            contentDescription = "Учеба или Работа",
+                            modifier = Modifier.size(70.dp),
                             tint = Color.Unspecified
                         )
                     }
-                    // label = { Text("Занятие") } // <-- Убрали подпись
                 )
 
                 NavigationBarItem(

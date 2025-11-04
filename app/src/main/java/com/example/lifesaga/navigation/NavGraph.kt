@@ -1,4 +1,6 @@
-// В файле navigation/NavGraph.kt
+// В файле: NavGraph.kt
+// ПОЛНОСТЬЮ ЗАМЕНИ СВОЙ КОД НА ЭТОТ
+
 package com.example.lifesaga.navigation
 
 import android.widget.Toast
@@ -8,9 +10,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.*
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-// import androidx.navigation.ExperimentalNavigationApi // <-- ЭТОТ ИМПОРТ БОЛЬШЕ НЕ НУЖЕН
 
 import com.example.lifesaga.data.AssetRepository
+import com.example.lifesaga.data.UniversityRepository
 import com.example.lifesaga.ui.screens.*
 import com.example.lifesaga.viewmodel.MainGameViewModel
 
@@ -19,7 +21,6 @@ const val GAME_ROUTE = "game"
 @Composable
 fun NavGraph() {
     val navController = rememberNavController()
-    // Создаем ViewModel здесь, на самом высоком уровне, и передаем его вниз
     val gameViewModel: MainGameViewModel = viewModel()
 
     NavHost(
@@ -29,7 +30,6 @@ fun NavGraph() {
         composable(Screen.MainMenu.route) {
             MainMenuScreen(
                 onNewGame = {
-                    // При старте новой игры, сбрасываем состояние ViewModel
                     gameViewModel.resetGame()
                     navController.navigate(GAME_ROUTE)
                 },
@@ -38,8 +38,10 @@ fun NavGraph() {
             )
         }
 
-        // Передаем ViewModel и NavController в наш вложенный граф
-        gameNavGraph(navController, gameViewModel)
+        // ▼▼▼ ВЫЗОВ ВЛОЖЕННОГО ГРАФА ▼▼▼
+        // Теперь он вызывается как обычная Composable функция внутри NavHost
+        gameNavGraph(this, navController, gameViewModel)
+        // ▲▲▲
 
         composable(
             route = "${Screen.GameOver.route}/{age}",
@@ -69,14 +71,15 @@ fun NavGraph() {
     }
 }
 
-// ▼▼▼ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: ПРИНИМАЕМ ViewModel КАК АРГУМЕНТ ▼▼▼
-fun NavGraphBuilder.gameNavGraph(navController: NavController, gameViewModel: MainGameViewModel) {
-    navigation(
+
+// ▼▼▼ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ! ▼▼▼
+// Теперь это обычная функция, которая принимает NavGraphBuilder как первый параметр.
+fun gameNavGraph(navGraphBuilder: NavGraphBuilder, navController: NavController, gameViewModel: MainGameViewModel) {
+    // И мы используем его для вызова navigation
+    navGraphBuilder.navigation(
         startDestination = Screen.CharacterCreation.route,
         route = GAME_ROUTE
     ) {
-        // Теперь не нужно получать ViewModel вручную, мы просто используем переданный
-
         composable(Screen.CharacterCreation.route) {
             CharacterCreationScreen(
                 onCharacterCreated = { characterName ->
@@ -93,6 +96,12 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController, gameViewModel: Ma
             MainGameScreen(viewModel = gameViewModel, navController = navController)
         }
 
+        // Теперь все эти composable функции находятся в правильном контексте
+        // и видят navController и gameViewModel без всяких проблем.
+        composable(Screen.Study.route) {
+            StudyScreen(navController = navController, viewModel = gameViewModel)
+        }
+
         composable(Screen.Jobs.route) {
             val character = gameViewModel.characterState.collectAsState().value
             if (character != null) {
@@ -107,22 +116,13 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController, gameViewModel: Ma
             }
         }
 
-        composable(Screen.School.route) {
-            SchoolScreen(
-                onActionSelected = { schoolAction ->
-                    gameViewModel.handleSchoolAction(schoolAction)
-                    navController.popBackStack()
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
         composable(Screen.Assets.route) {
             val character = gameViewModel.characterState.collectAsState().value
             if (character != null) {
                 AssetsScreen(
                     character = character,
-                    availableAssets = AssetRepository.getAvailableAssets(character),                    onBuyAsset = { asset ->
+                    availableAssets = AssetRepository.getAvailableAssets(character),
+                    onBuyAsset = { asset ->
                         gameViewModel.buyAsset(asset)
                         navController.popBackStack()
                     },
@@ -131,14 +131,27 @@ fun NavGraphBuilder.gameNavGraph(navController: NavController, gameViewModel: Ma
             }
         }
 
+        composable(Screen.Enrollment.route) {
+            val character = gameViewModel.characterState.collectAsState().value
+            if (character != null) {
+                EnrollmentScreen(
+                    availableUniversities = UniversityRepository.getAvailableUniversities(character),
+                    currentMoney = character.money,
+                    onEnroll = { university ->
+                        gameViewModel.enrollInUniversity(university)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
         composable(Screen.Relationships.route) {
-            // Передаем и ViewModel тоже
             RelationshipsScreen(navController = navController, gameViewModel = gameViewModel)
         }
 
         composable(Screen.Actions.route) {
             ActionsScreen(navController = navController, gameViewModel = gameViewModel)
         }
-
     }
 }
